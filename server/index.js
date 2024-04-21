@@ -92,6 +92,8 @@ const server = http.createServer((req, res) => {
   res.writeHead(404, { 'Content-Type': 'text/plain' }).end('Not Found\n')
 })
 
+let users = {}
+
 const p = path.join(process.cwd(), 'data', 'db.json')
 let shares = {}
 try {
@@ -148,6 +150,29 @@ io.on('connection', socket => {
     socket.to(`note:${id}`).emit('update', { id, type, data })
     persist()
     cb?.('ok')
+  })
+
+  // presence
+
+  const { name, color } = socket.handshake.query
+  const user = (users[socket.id] = { id: socket.id, name, color, focus: null })
+  socket.broadcast.emit('user:join', user)
+  socket.emit('presence', users)
+
+  socket.on('user:update', ({ name, color }) => {
+    if (name) user.name = name
+    if (color) user.color = color
+    io.emit('user:update', user)
+  })
+
+  socket.on('user:focus', id => {
+    user.focus = id
+    socket.broadcast.emit('user:update', user)
+  })
+
+  socket.on('disconnect', () => {
+    delete users[socket.id]
+    socket.broadcast.emit('user:leave', socket.id)
   })
 })
 
