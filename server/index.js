@@ -116,11 +116,7 @@ io.on('connection', socket => {
     if (shares[id].secret !== secret) return cb?.('unauthed')
     socket.join(`note:${id}`)
     socket.notes[id] = true
-    for (const row of Object.values(shares[id].data)) {
-      if (row.deleted) continue
-      socket.emit('update', { id, type: 'WRITEFILE', data: row })
-    }
-    cb?.('ok')
+    cb?.('ok', shares[id].data)
   })
 
   socket.on('leave', ({ id }, cb) => {
@@ -156,7 +152,7 @@ io.on('connection', socket => {
 })
 
 function persist () {
-  fs.writeFileSync(p, JSON.stringify(shares), 'utf-8')
+  fs.writeFileSync(p, JSON.stringify(shares, null, 2), 'utf-8')
 }
 
 server.listen(process.env.PORT || 3000)
